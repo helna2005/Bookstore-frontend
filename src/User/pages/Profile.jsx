@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Header1 from '../components/Header1'
 import { FaCheck } from "react-icons/fa";
 import { DiVim } from 'react-icons/di';
@@ -6,29 +6,44 @@ import Edit from '../components/Edit';
 import UploadBook from '../components/UploadBook';
 import BookStatus from '../components/BookStatus';
 import PurchaseBook from '../components/PurchaseBook';
+import axiosInstance from '../../api/axiosInstance';
 
 function Profile() {
 
   //clik tab change content
   const [currentTab, setCurrentTab] = useState(1)
+  //picture for login
+    const [username, setUsername] = useState("")
+    const [dp, setDp] = useState("")
+    const [bio,setBio]=useState("")
+
+    useEffect(() => {
+        if (sessionStorage.getItem("token") && sessionStorage.getItem("user")) {
+          const user = JSON.parse(sessionStorage.getItem("user"))
+          setDp(user?.picture)
+          setUsername(user?.username)
+          setBio(user?.bio)
+        }
+      }, [])
+    
 
   return (
     <>
       <Header1 />
       <div style={{ height: '200px' }} className="bg-black"></div>
       <div style={{ width: '230px', height: '230px', borderRadius: '50%', marginTop: '-130px', marginLeft: '70px' }} className='bg-white p-3'>
-        <img style={{ width: '200px', height: '200px', borderRadius: '50%' }} src="https://cdn-icons-png.flaticon.com/512/219/219969.png" alt="user" />
+        <img style={{ width: '200px', height: '200px', borderRadius: '50%' }}  src={dp == "" ? "https://www.freeiconspng.com/thumbs/computer-user-icon/computer-user-icon-2.png" : dp.startsWith("https://lh3.googleusercontent.com/") ? dp :`${axiosInstance.defaults.baseURL}/uploads/${dp}`} alt="user" />
       </div>
       <div className="md:flex justify-between px-5">
         <div className="flex items-center">
-          <h1 className="text-2xl font-black md:text-3xl">Username</h1>
+          <h1 className="text-2xl font-black md:text-3xl">{username}</h1>
           <FaCheck className='text-blue-700 ms-3' />
         </div>
         <div>
          <Edit/>
         </div>
       </div>
-      <p className='fw-bold text-xl px-20 mt-5'>Bio</p>
+      <p className='fw-bold text-xl px-20 mt-5'>{bio}</p>
       <p className="text-justify md:px-20 px-5 my-5">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Necessitatibus magni in facere commodi, modi aspernatur reprehenderit nisi? Harum, nisi quas! Maxime nobis perspiciatis expedita. Eius fugiat culpa asperiores dolores perferendis! Lorem ipsum dolor sit amet consectetur adipisicing elit. Odio corrupti suscipit quam dolore similique aliquid iure beatae, hic consequuntur nulla ex cumque, aperiam iste reprehenderit perspiciatis numquam excepturi culpa ipsum. Lorem ipsum dolor sit amet consectetur adipisicing elit. Soluta reiciendis inventore ut. Hic nam commodi sed, iusto numquam necessitatibus! Deleniti perspiciatis harum numquam reiciendis provident? Debitis natus quis libero veritatis.</p>
       <div className="md:px-40">
         {/* tabs */}

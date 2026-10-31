@@ -1,11 +1,38 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Header1 from '../components/Header1'
 import { FaBackward, FaCamera, FaEye } from 'react-icons/fa'
-import { Link } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
+import { buyBookAPI, viewBookAPI } from '../../services/allApi'
+import axiosInstance from '../../api/axiosInstance'
+import {loadStripe} from '@stripe/stripe-js';
 
 function View() {
 
   const [model, setModel] = useState(false)
+  const {id}=useParams()
+  const [bookDetails,setBookDetails]=useState({})
+  console.log(bookDetails);
+  
+  useEffect(()=>{
+    getBookDetails()
+  },[])
+
+  const getBookDetails=async()=>{
+    const result=await viewBookAPI(id)
+    setBookDetails(result.data)
+    
+  }
+
+  const makePayment=async ()=>{
+    console.log(import.meta.env.VITE_STRIPE_PK);
+    //load stripe
+    const stripe = await loadStripe(import.meta.env.VITE_STRIPE_PK);
+    console.log(stripe);
+    //api call
+    const result=await buyBookAPI(id)
+    window.location.href=result.data.checkoutURL
+    
+  }
 
   return (
     <>
@@ -15,29 +42,29 @@ function View() {
           <div className="md:grid grid-cols-4 gap-x-10">
             {/* image */}
             <div className="col-span-1">
-              <img src="https://d1csarkz8obe9u.cloudfront.net/posterpreviews/contemporary-fiction-night-time-book-cover-design-template-1be47835c3058eb42211574e0c4ed8bf_screen.jpg?ts=1734004864" alt="book" className="w-full" />
+              <img src={bookDetails?.imagURL} alt="book" className="w-full" />
             </div>
             {/* book details */}
             <div className="col-span-3">
               <div className="flex justify-between mt-5 md:mt-0">
-                <h3 className=' text-2xl font-bold'>Title</h3>
+                <h3 className=' text-2xl font-bold'>{bookDetails?.title}</h3>
                 <button onClick={() => setModel(true)} className='text-gray-400'><FaEye /></button>
               </div>
-              <h2 className='text-blue-800 font-bold text-xl my-5'>Author</h2>
+              <h2 className='text-blue-800 font-bold text-xl my-5'>{bookDetails?.author}</h2>
               <div className="md:grid grid-cols-3 gap-5 my-10">
-                <p className="font-bold">Publisher:</p>
-                <p className="font-bold">Language:</p>
-                <p className="font-bold">No. of Pages:</p>
-                <p className="font-bold">Category:</p>
-                <p className="font-bold">ISBN:</p>
-                <p className="font-bold">Seller:</p>
+                <p className="font-bold">Publisher:{bookDetails?.publisher}</p>
+                <p className="font-bold">Language:{bookDetails?.language}</p>
+                <p className="font-bold">No. of Pages:{bookDetails?.pages}</p>
+                <p className="font-bold">Category:{bookDetails?.category}</p>
+                <p className="font-bold">ISBN:{bookDetails?.isbn}</p>
+                <p className="font-bold">Seller:{bookDetails?.sellerMail}</p>
               </div>
               <div>
-                <h4 className="font-bold text-lg"> Abstact:</h4>
+                <h4 className="font-bold text-lg"> Abstact:{bookDetails?.abstract}</h4>
               </div>
               <div className='flex justify-end'>
                 <Link to={'/books'} className="bg-blue-900 text-white p-2 font-black flex items-center rounded"><FaBackward className='me-2' />Back</Link>
-                <button className="bg-green-900 text-white font-black ms-5 p-5 rounded">Buy $230</button>
+                <button onClick={makePayment} className="bg-green-900 text-white font-black ms-5 p-5 rounded">Buy $230</button>
               </div>
             </div>
           </div>
@@ -59,7 +86,14 @@ function View() {
                     </p>
                     <div className='md:flex flex-wrap my-5'>
                       {/* duplicate image */}
-                      <img className='md:w-75 w-25 md:me-2 md:mt-0 mb-3' src="https://d1csarkz8obe9u.cloudfront.net/posterpreviews/contemporary-fiction-night-time-book-cover-design-template-1be47835c3058eb42211574e0c4ed8bf_screen.jpg?ts=1734004864" alt="" />
+                      {
+                        bookDetails?.uploadImage?.length>0 ?
+                        bookDetails?.uploadImage?.map(filename=>(
+                          <img className='md:w-75 w-25 md:me-2 md:mt-0 mb-3' src={`${axiosInstance.defaults.baseURL}/uploads/${filename}`} alt="books" />
+                        ))
+                        :
+                        <div className='my-5 font-semibold'>Image not available!!!</div>
+                      }
                     </div>
                   </div>
                 </div>

@@ -1,5 +1,5 @@
 import { useFormik } from 'formik';
-import React, { useState } from 'react'
+import React, { useContext, useState } from 'react'
 import { FaUser } from "react-icons/fa";
 import { FaEye } from "react-icons/fa";
 import { FaEyeSlash } from "react-icons/fa";
@@ -7,9 +7,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import * as Yup from 'yup'
 
 import { ToastContainer, toast } from 'react-toastify';
-import { loginAPI, registerAPI } from '../services/allApi';
+import { googleLoginAPI, loginAPI, registerAPI } from '../services/allApi';
+import { GoogleLogin } from '@react-oauth/google';
+import { jwtDecode } from "jwt-decode";
+import { routeContext } from '../contextAPI/RouteGaurd';
 
 function Auth({ insideRegister }) {
+
+   const { role, setRole, authorisedUser, setAuthorisedUser } = useContext(routeContext)
 
   //navigate to login page
   const navigate = useNavigate()
@@ -49,10 +54,13 @@ function Auth({ insideRegister }) {
       toast.success("Successfully Login....")
       sessionStorage.setItem("token", result.data.token)
       sessionStorage.setItem("user", JSON.stringify(result.data.user))
+      setAuthorisedUser(true)
       setTimeout(() => {
         if (result.data.user.role == "admin") {
+          setRole("admin")
           navigate('/admin')
         } else {
+          setRole("user")
           navigate('/')
         }
       }, 2500)
@@ -62,95 +70,131 @@ function Auth({ insideRegister }) {
   }
 
 
-const handleRegister = async (userData) => {
-  const result = await registerAPI(userData)
-  console.log(result);
-  if (result.status == 201) {
-    toast.success("Successfully Registed....Please Login!!")
-  } else {
-    toast.error(result)
+  const handleRegister = async (userData) => {
+    const result = await registerAPI(userData)
+    console.log(result);
+    if (result.status == 201) {
+      toast.success("Successfully Registed....Please Login!!")
+    } else {
+      toast.error(result)
+    }
+    navigate("/login")
   }
-  navigate("/login")
-}
 
-return (
-  <div className='w-full min-h-screen flex justify-center items-center bg-[url(/login.png)] bg-cover bg-center text-white'>
-    <div className='p-10'>
-      <h1 className='text-center font-bold text-3xl'>BOOKSTORE</h1>
-      <div style={{ width: '400px' }} className='bg-amber-100 text-black p-5 flex justify-center items-center flex-col my-5'>
-        <div style={{ width: '80px', height: '80px', borderRadius: '50%' }} className='border mb-5 flex justify-center items-center '>
-          <FaUser className='text-3xl' />
-        </div>
-        <h1 className='text-3xl'>{insideRegister ? "Register" : "Login"}</h1>
-        <form onSubmit={formik.handleSubmit} className='my-5 w-full'>
-          {/* username */}
-          {
-            insideRegister &&
-            <>
-              <input name='username' value={formik.values.username} onChange={formik.handleChange} className='bg-white p-2 w-full rounded my-5 text-black' type="text" placeholder='Username' />
-              <div className='mb-5 text-yellow-400'>{formik.errors.username}</div>
-            </>
-          }
-          {/* email */}
+  const handleGoogleLogin=async(credentialResponse)=>{
+    console.log("Inside Google Login");
+    const {email,name,picture}=jwtDecode(credentialResponse.credential)
+    console.log(email,name,picture);
+    //api call
+    const result=await googleLoginAPI({username:name,email,password:"googlepassword",picture})
+    if (result.status == 200) {
+      toast.success("Login Successfully....")
+      sessionStorage.setItem("token", result.data.token)
+      sessionStorage.setItem("user", JSON.stringify(result.data.user))
+      setAuthorisedUser(true)
+      setTimeout(() => {
+        if (result.data.user.role == "admin") {
+          setRole("admin")
+          navigate('/admin')
+        } else {
+          setRole("user")
+          navigate('/')
+        }
+      }, 2500)
+    }
+    
+  }
 
-          <input name='email' value={formik.values.email} onChange={formik.handleChange} className='bg-white p-2 w-full rounded my-5 text-black' type="text" placeholder='Email' />
-          <div className='mb-5 text-yellow-400'>{formik.errors.email}</div>
-          {/* password */}
 
-          <div className='flex items-center'>
-            <input name='password' value={formik.values.password} onChange={formik.handleChange} className='bg-white p-2 w-full rounded my-5 text-black' type={togglePassword ? "text" : "password"} placeholder='password' />
-
-            {
-              togglePassword ?
-                <FaEye onClick={() => setTogglePassword(!togglePassword)} className='cursor-pointer' style={{ marginLeft: '-30px' }} />
-                :
-                <FaEyeSlash onClick={() => setTogglePassword(!togglePassword)} className='cursor-pointer' style={{ marginLeft: '-30px' }} />
-            }
+  return (
+    <div className='w-full min-h-screen flex justify-center items-center bg-[url(/login.png)] bg-cover bg-center text-white'>
+      <div className='p-10'>
+        <h1 className='text-center font-bold text-3xl'>BOOKSTORE</h1>
+        <div style={{ width: '400px' }} className='bg-amber-100 text-black p-5 flex justify-center items-center flex-col my-5'>
+          <div style={{ width: '80px', height: '80px', borderRadius: '50%' }} className='border mb-5 flex justify-center items-center '>
+            <FaUser className='text-3xl' />
           </div>
-          <div className='mb-5 text-yellow-400'>{formik.errors.password}</div>
-          {/* forgetpassword */}
-          <div className='flex justify-between mb-5'>
-            <p className='text-xs text-yellow-800'>Never share your password</p>
+          <h1 className='text-3xl'>{insideRegister ? "Register" : "Login"}</h1>
+          <form onSubmit={formik.handleSubmit} className='my-5 w-full'>
+            {/* username */}
+            {
+              insideRegister &&
+              <>
+                <input name='username' value={formik.values.username} onChange={formik.handleChange} className='bg-white p-2 w-full rounded my-5 text-black' type="text" placeholder='Username' />
+                <div className='mb-5 text-yellow-400'>{formik.errors.username}</div>
+              </>
+            }
+            {/* email */}
+
+            <input name='email' value={formik.values.email} onChange={formik.handleChange} className='bg-white p-2 w-full rounded my-5 text-black' type="text" placeholder='Email' />
+            <div className='mb-5 text-yellow-400'>{formik.errors.email}</div>
+            {/* password */}
+
+            <div className='flex items-center'>
+              <input name='password' value={formik.values.password} onChange={formik.handleChange} className='bg-white p-2 w-full rounded my-5 text-black' type={togglePassword ? "text" : "password"} placeholder='password' />
+
+              {
+                togglePassword ?
+                  <FaEye onClick={() => setTogglePassword(!togglePassword)} className='cursor-pointer' style={{ marginLeft: '-30px' }} />
+                  :
+                  <FaEyeSlash onClick={() => setTogglePassword(!togglePassword)} className='cursor-pointer' style={{ marginLeft: '-30px' }} />
+              }
+            </div>
+            <div className='mb-5 text-yellow-400'>{formik.errors.password}</div>
+            {/* forgetpassword */}
+            <div className='flex justify-between mb-5'>
+              <p className='text-xs text-yellow-800'>Never share your password</p>
+              {
+                !insideRegister &&
+                <button className='text-xs underline'>Forget password</button>
+              }
+
+            </div>
+            {/* login & register button */}
+            <div className='text-center'>
+              {
+                insideRegister ?
+                  <button type='submit' className='bg-green-500 p-2 w-full rounded'>Register</button>
+                  :
+                  <button type='submit' className='bg-green-500 p-2 w-full rounded'>Login</button>
+              }
+            </div>
+            {/* google login */}
             {
               !insideRegister &&
-              <button className='text-xs underline'>Forget password</button>
-            }
+              <div className='MY-5 text-center'>
+                <p>------------------------------or------------------------------</p>
+                <div className='mt-2 flex justify-center items-center w-full'>
 
-          </div>
-          {/* login & register button */}
-          <div className='text-center'>
-            {
-              insideRegister ?
-                <button type='submit' className='bg-green-500 p-2 w-full rounded'>Register</button>
-                :
-                <button type='submit' className='bg-green-500 p-2 w-full rounded'>Login</button>
+                  <GoogleLogin
+                    onSuccess={credentialResponse => {
+                      handleGoogleLogin(credentialResponse)
+                    }}
+                    onError={() => {
+                      console.log('Login Failed');
+                    }}
+                  />
+
+                </div>
+              </div>
             }
-          </div>
-          {/* google login */}
-          {
-            !insideRegister &&
-            <div className='MY-5 text-center'>
-              <p>------------------------------or------------------------------</p>
-              <div className='mt-2 flex justify-center items-center w-full'>Google Authentication</div>
+            {/* new / already register msg */}
+            <div className='text-center my-5'>
+              {
+                insideRegister ?
+                  <p className='text-amber-700'>Existing user?<Link to={'/login'} className='underline ms-5'>Login</Link></p>
+                  :
+                  <p className='text-amber-700'> New User?<Link to={'/register'} className='underline ms-5'>Register</Link></p>
+              }
             </div>
-          }
-          {/* new / already register msg */}
-          <div className='text-center my-5'>
-            {
-              insideRegister ?
-                <p className='text-amber-700'>Existing user?<Link to={'/login'} className='underline ms-5'>Login</Link></p>
-                :
-                <p className='text-amber-700'> New User?<Link to={'/register'} className='underline ms-5'>Register</Link></p>
-            }
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
-    </div>
 
-    {/* toast container */}
-    <ToastContainer position='top-center' theme='colored' autoClose={3000} />
-  </div>
-)
+      {/* toast container */}
+      <ToastContainer position='top-center' theme='colored' autoClose={3000} />
+    </div>
+  )
 }
 
 export default Auth
